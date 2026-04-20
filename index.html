@@ -195,7 +195,7 @@ main {
 /* FORM */
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr 1.4fr auto;
+  grid-template-columns: 1fr 1.6fr 1fr 1.4fr auto;
   gap: 10px;
   align-items: end;
 }
@@ -551,6 +551,10 @@ main {
           <input type="text" id="inp-janice" placeholder="https://janice.e-351.com/a/XXXXXX" />
         </div>
         <div class="field">
+          <label>Valor Buy (ISK)</label>
+          <input type="number" id="inp-value" placeholder="Ej: 5200000000" min="0" />
+        </div>
+        <div class="field">
           <label>Categoría</label>
           <select id="inp-cat">
             <option value="loot">Loot / Módulos / Salvage — 97%</option>
@@ -653,42 +657,25 @@ function showStatus(msg, type) {
   if (type !== 'loading') setTimeout(() => el.className = 'status', 5000);
 }
 
-async function addContract() {
+function addContract() {
   const player = document.getElementById('inp-player').value.trim();
   const url    = document.getElementById('inp-janice').value.trim();
+  const valRaw = document.getElementById('inp-value').value.trim();
   const cat    = document.getElementById('inp-cat').value;
 
   if (!player) { showStatus('⚠ Ingresa el nombre del jugador.', 'err'); return; }
   if (!url.includes('janice.e-351.com')) { showStatus('⚠ El link no parece ser de Janice.', 'err'); return; }
+  const buyVal = parseFloat(valRaw);
+  if (!buyVal || buyVal <= 0) { showStatus('⚠ Ingresa el valor Buy de Janice en ISK.', 'err'); return; }
 
-  const parts = url.split('/').filter(Boolean);
-  const code  = parts[parts.length - 1].split('?')[0];
+  records.push({ player, url, cat, buyVal, date: new Date().toISOString() });
+  save();
 
-  showStatus('[ Consultando Janice API... ]', 'loading');
-
-  try {
-    const apiUrl = `https://janice.e-351.com/api/rest/v2/appraisal/${code}?market=2&designation=buy&persist=true`;
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    let buyVal = data.totalBuyPrice
-      || (data.effectivePrices && data.effectivePrices.totalBuyPrice)
-      || (data.immediatePrices && data.immediatePrices.totalBuyPrice)
-      || 0;
-
-    if (!buyVal || buyVal === 0) throw new Error('Valor de compra no encontrado en el appraisal');
-
-    records.push({ player, url, code, cat, buyVal, date: new Date().toISOString() });
-    save();
-
-    document.getElementById('inp-player').value = '';
-    document.getElementById('inp-janice').value = '';
-    showStatus(`✓ Contrato agregado — ${player} / ${fmtISK(buyVal)} ISK`, 'ok');
-    render();
-  } catch(e) {
-    showStatus(`✗ Error: ${e.message}. Verifica el link o intenta con un appraisal público.`, 'err');
-  }
+  document.getElementById('inp-player').value = '';
+  document.getElementById('inp-janice').value = '';
+  document.getElementById('inp-value').value  = '';
+  showStatus(`✓ Contrato agregado — ${player} / ${fmtISK(buyVal)} ISK`, 'ok');
+  render();
 }
 
 function deleteRecord(i) {
